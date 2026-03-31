@@ -104,7 +104,7 @@ class CSVAdapter(ProcessingPipeline):
                     print("Transform: Parsed and structured data")
                 elif isinstance(stage, OutputStage):
                     data["actions"] = 1
-                    out: str = (f"Output: User activity logged: "
+                    out: str = ("User activity logged: "
                                 f"{data['actions']} actions processed")
                     stage.process(out)
 
