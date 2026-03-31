@@ -3,12 +3,10 @@ from typing import Any, List, Optional, Union, Dict
 
 
 class DataStream(ABC):
-    # guarda cada stream_id en self.stream_id
     def __init__(self, stream_id: str) -> None:
         self.stream_id: str = stream_id
         self.count: int = 0
 
-    # funciones basicas de transmisión de datos
     @abstractmethod
     def process_batch(self, data_batch: List[Any]) -> str:
         """Process a batch of data"""
@@ -95,6 +93,44 @@ class EventStream(DataStream):
             return f"{e}"
 
 
+class StreamProcessor:
+    def __init__(self) -> None:
+        self.streams: List[DataStream] = []
+
+    def add_stream(self, stream: DataStream) -> None:
+        if isinstance(stream, DataStream):
+            self.streams.append(stream)
+
+    def process_all(self, batch_list: List[List[str]]) -> None:
+        # Process batch
+        for mng, batch in zip(self.streams, batch_list):
+            mng.process_batch(batch)
+
+        # Display info
+            if isinstance(mng, SensorStream):
+                print(f"- Sensor data: {mng.count} readings processed")
+            elif isinstance(mng, TransactionStream):
+                print(f"- Transaction data: {mng.count} operations processed")
+            elif isinstance(mng, EventStream):
+                print(f"- Event data: {mng.count} events processed")
+
+    def filtered_results(self, batch_list: List[List[str]]) -> None:
+        sensor_alert: int = 0
+        large_transaction: int = 0
+
+        for mng, batch in zip(self.streams, batch_list):
+            if isinstance(mng, SensorStream):
+                sensor_alert += len(mng.filter_data(batch, "temp"))
+            elif isinstance(mng, TransactionStream):
+                large_list: List[str] = [data for data in batch
+                                         if int(data.split(":")[1]) > 100]
+                large_transaction = len(large_list)
+
+        print("\nStream filtering active: High-priority data only"
+              f"\nFiltered results: {sensor_alert} critical sensor alerts, "
+              f"{large_transaction} large transaction")
+
+
 def stream_processing() -> None:
     print(
         "\n=== Polymorphic Stream Processing ===\n"
@@ -113,37 +149,12 @@ def stream_processing() -> None:
         ["login", "error", "logout"]
     ]
 
-    # Process batch
-    for mng, batch in zip(mng_list, batch_list):
-        mng.process_batch(batch)
+    processor = StreamProcessor()
+    for mng in mng_list:
+        processor.add_stream(mng)
 
-    # Display info
-        if isinstance(mng, SensorStream):
-            print(f"- Sensor data: {mng.count} readings processed")
-        elif isinstance(mng, TransactionStream):
-            print(f"- Transaction data: {mng.count} operations processed")
-        elif isinstance(mng, EventStream):
-            print(f"- Event data: {mng.count} events processed")
-
-    filtered_results(mng_list, batch_list)
-
-
-def filtered_results(mng_list: List[DataStream],
-                     batch_list: List[List[str]]) -> None:
-    sensor_alert: int = 0
-    large_transaction: int = 0
-
-    for mng, batch in zip(mng_list, batch_list):
-        if isinstance(mng, SensorStream):
-            sensor_alert += len(mng.filter_data(batch, "temp"))
-        elif isinstance(mng, TransactionStream):
-            large_list: List[str] = [data for data in batch
-                                     if int(data.split(":")[1]) > 100]
-            large_transaction = len(large_list)
-
-    print("\nStream filtering active: High-priority data only"
-          f"\nFiltered results: {sensor_alert} critical sensor alerts, "
-          f"{large_transaction} large transaction")
+    processor.process_all(batch_list)
+    processor.filtered_results(batch_list)
 
 
 def main() -> None:
